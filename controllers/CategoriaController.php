@@ -54,20 +54,39 @@ class CategoriaController
             $this->redirigir();
         }
 
+        $esAjax      = !empty($_POST['ajax']);
         $nombre      = trim($_POST['nombre']      ?? '');
         $descripcion = trim($_POST['descripcion'] ?? '');
 
         if ($nombre === '') {
+            if ($esAjax) { $this->jsonError('El nombre de la categoría es obligatorio.'); }
             $this->alert('warning', 'Campo requerido', 'El nombre de la categoría es obligatorio.');
             $this->redirigir();
         }
 
         if ($this->model->existeNombre($nombre)) {
+            if ($esAjax) { $this->jsonError("Ya existe una categoría llamada «{$nombre}»."); }
             $this->alert('error', 'Nombre duplicado', "Ya existe una categoría llamada «{$nombre}».");
             $this->redirigir();
         }
 
         $res = $this->model->crear(['nombre' => $nombre, 'descripcion' => $descripcion, 'cantidad' => (int)($_POST['cantidad'] ?? 0)]);
+
+        if ($esAjax) {
+            if ($res === true) {
+                // Obtener el ID recién insertado
+                $db   = (new Database())->conectar();
+                $stmt = $db->prepare("SELECT id_categoria FROM categorias_productos WHERE nombre = :n ORDER BY id_categoria DESC LIMIT 1");
+                $stmt->execute([':n' => $nombre]);
+                $id = (int) $stmt->fetchColumn();
+                header('Content-Type: application/json');
+                echo json_encode(['id' => $id, 'nombre' => $nombre]);
+            } else {
+                $this->jsonError($res);
+            }
+            exit;
+        }
+
         $res === true
             ? $this->alert('success', 'Éxito', 'Categoría creada correctamente.')
             : $this->alert('error',   'Error', $res);
@@ -126,6 +145,13 @@ class CategoriaController
     private function alert(string $icon, string $title, string $text): void
     {
         $_SESSION['alert'] = compact('icon', 'title', 'text');
+    }
+
+    private function jsonError(string $msg): never
+    {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $msg]);
+        exit;
     }
 
     private function redirigir(): never

@@ -17,7 +17,7 @@ class Inventario
     public function obtenerProductos(string $buscar = ''): array
     {
         $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio,
-                       p.stock, p.activo, c.nombre AS categoria,
+                       p.stock, p.activo, p.imagen, c.nombre AS categoria,
                        pv.nombre AS proveedor
                 FROM productos p
                 JOIN categorias_productos c ON c.id_categoria = p.id_categoria
@@ -50,9 +50,12 @@ class Inventario
     public function crearProducto(array $d): bool|string
     {
         try {
+            // Asegurar que la columna imagen exista
+            $this->asegurarColumnaImagen();
+
             $stmt = $this->conn->prepare(
-                "INSERT INTO productos (id_categoria, nombre, descripcion, precio, stock, activo)
-                 VALUES (:cat, :nom, :desc, :precio, :stock, 1)"
+                "INSERT INTO productos (id_categoria, nombre, descripcion, precio, stock, imagen, activo)
+                 VALUES (:cat, :nom, :desc, :precio, :stock, :imagen, 1)"
             );
             $stmt->execute([
                 ':cat'    => $d['id_categoria'],
@@ -60,6 +63,7 @@ class Inventario
                 ':desc'   => $d['descripcion'] ?? '',
                 ':precio' => $d['precio'],
                 ':stock'  => $d['stock'] ?? 0,
+                ':imagen' => $d['imagen'] ?? null,
             ]);
             return true;
         } catch (\Throwable $e) { return $e->getMessage(); }
@@ -68,19 +72,51 @@ class Inventario
     public function actualizarProducto(int $id, array $d): bool|string
     {
         try {
-            $stmt = $this->conn->prepare(
-                "UPDATE productos SET id_categoria=:cat, nombre=:nom,
-                 descripcion=:desc, precio=:precio WHERE id_producto=:id"
-            );
-            $stmt->execute([
-                ':cat'    => $d['id_categoria'],
-                ':nom'    => $d['nombre'],
-                ':desc'   => $d['descripcion'] ?? '',
-                ':precio' => $d['precio'],
-                ':id'     => $id,
-            ]);
+            $this->asegurarColumnaImagen();
+
+            // Si viene imagen nueva la actualiza, si no conserva la anterior
+            if (!empty($d['imagen'])) {
+                $stmt = $this->conn->prepare(
+                    "UPDATE productos SET id_categoria=:cat, nombre=:nom,
+                     descripcion=:desc, precio=:precio, imagen=:imagen
+                     WHERE id_producto=:id"
+                );
+                $stmt->execute([
+                    ':cat'    => $d['id_categoria'],
+                    ':nom'    => $d['nombre'],
+                    ':desc'   => $d['descripcion'] ?? '',
+                    ':precio' => $d['precio'],
+                    ':imagen' => $d['imagen'],
+                    ':id'     => $id,
+                ]);
+            } else {
+                $stmt = $this->conn->prepare(
+                    "UPDATE productos SET id_categoria=:cat, nombre=:nom,
+                     descripcion=:desc, precio=:precio WHERE id_producto=:id"
+                );
+                $stmt->execute([
+                    ':cat'    => $d['id_categoria'],
+                    ':nom'    => $d['nombre'],
+                    ':desc'   => $d['descripcion'] ?? '',
+                    ':precio' => $d['precio'],
+                    ':id'     => $id,
+                ]);
+            }
             return true;
         } catch (\Throwable $e) { return $e->getMessage(); }
+    }
+
+    /** Agrega la columna imagen si aún no existe en la tabla productos */
+    private function asegurarColumnaImagen(): void
+    {
+        try {
+            $cols = $this->conn->query("DESCRIBE productos")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('imagen', $cols)) {
+                $this->conn->exec(
+                    "ALTER TABLE `productos` ADD COLUMN `imagen` VARCHAR(255) DEFAULT NULL AFTER `stock`"
+                );
+            }
+        } catch (\Throwable) { /* silencioso */ }
     }
 
     // ── Entradas al almacén ───────────────────────────────────

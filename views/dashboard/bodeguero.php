@@ -106,14 +106,25 @@ document.addEventListener('DOMContentLoaded',()=>Swal.fire({
     <div class="panel" style="padding:0;overflow:hidden;">
     <div style="overflow-x:auto;">
     <table class="bod-tbl" id="tablaInv">
-        <thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Estado</th><th class="no-print">Acción</th></tr></thead>
+        <thead><tr><th>#</th><th>Imagen</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Estado</th><th class="no-print">Acción</th></tr></thead>
         <tbody>
         <?php if (empty($productos)): ?>
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:#aaa;"><i class="fas fa-box-open" style="font-size:32px;opacity:.2;display:block;margin-bottom:8px;"></i>Sin productos registrados.</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:#aaa;"><i class="fas fa-box-open" style="font-size:32px;opacity:.2;display:block;margin-bottom:8px;"></i>Sin productos registrados.</td></tr>
         <?php endif; ?>
         <?php foreach ($productos as $i => $p): ?>
         <tr data-search="<?= strtolower(htmlspecialchars($p['nombre'].' '.$p['categoria'])) ?>">
             <td style="color:#aaa"><?= $i+1 ?></td>
+            <td>
+                <?php if (!empty($p['imagen'])): ?>
+                    <img src="../../img/productos/<?= htmlspecialchars($p['imagen']) ?>"
+                         alt="<?= htmlspecialchars($p['nombre']) ?>"
+                         style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid #e0e8ec;">
+                <?php else: ?>
+                    <div style="width:44px;height:44px;border-radius:8px;background:#f0f4f6;display:flex;align-items:center;justify-content:center;border:1px solid #e0e8ec;">
+                        <i class="fas fa-image" style="color:#c8d8df;font-size:16px;"></i>
+                    </div>
+                <?php endif; ?>
+            </td>
             <td style="font-weight:600;color:var(--navy)"><?= htmlspecialchars($p['nombre']) ?></td>
             <td><?= htmlspecialchars($p['categoria']) ?></td>
             <td>$ <?= number_format($p['precio'],2,',','.') ?></td>
@@ -347,7 +358,7 @@ document.addEventListener('DOMContentLoaded',()=>Swal.fire({
         <h3 style="font-size:17px;font-weight:700;color:#1a2d47;margin:0;"><i class="fas fa-plus"></i> Nuevo Producto</h3>
         <button onclick="closeModal('modalCrearProd')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#1a2d47;">✕</button>
     </div>
-    <form method="POST" action="../../controllers/InventarioController.php?accion=crear_producto" style="padding:22px;display:flex;flex-direction:column;gap:12px;">
+    <form method="POST" action="../../controllers/InventarioController.php?accion=crear_producto" enctype="multipart/form-data" style="padding:22px;display:flex;flex-direction:column;gap:12px;">
         <div class="form-grid">
             <div class="form-row"><label>Nombre *</label><input type="text" name="nombre" class="inp" required placeholder="Nombre del producto"></div>
             <div class="form-row"><label>Categoría *</label>
@@ -364,6 +375,17 @@ document.addEventListener('DOMContentLoaded',()=>Swal.fire({
             <div class="form-row"><label>Stock inicial</label><input type="number" name="stock" class="inp" min="0" value="0" placeholder="0"></div>
         </div>
         <div class="form-row"><label>Descripción</label><textarea name="descripcion" class="inp" rows="2" style="resize:none;" placeholder="Descripción opcional..."></textarea></div>
+        <div class="form-row">
+            <label>Imagen del producto <span style="font-weight:400;color:#aaa;">(JPG, PNG, WEBP · máx. 2 MB)</span></label>
+            <div id="crear-drop-zone" onclick="document.getElementById('crear_imagen_input').click()"
+                 style="border:2px dashed #c8d8df;border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:#fafcfd;">
+                <i class="fas fa-cloud-upload-alt" style="font-size:24px;color:#8FB7C7;display:block;margin-bottom:6px;"></i>
+                <span id="crear-drop-label" style="font-size:12px;color:#7a8fa6;">Haz clic o arrastra una imagen aquí</span>
+                <img id="crear-preview" src="" alt="" style="display:none;max-height:100px;margin:8px auto 0;border-radius:8px;object-fit:cover;">
+            </div>
+            <input type="file" id="crear_imagen_input" name="imagen" accept="image/*" style="display:none;"
+                   onchange="previewImagen(this,'crear-preview','crear-drop-label')">
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
             <button type="button" onclick="closeModal('modalCrearProd')" style="padding:9px 20px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
             <button type="submit" class="btn-navy">Guardar</button>
@@ -379,8 +401,9 @@ document.addEventListener('DOMContentLoaded',()=>Swal.fire({
         <h3 style="font-size:17px;font-weight:700;color:#1a2d47;margin:0;"><i class="fas fa-pen"></i> Editar Producto</h3>
         <button onclick="closeModal('modalEditarProd')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#1a2d47;">✕</button>
     </div>
-    <form method="POST" action="../../controllers/InventarioController.php?accion=editar_producto" style="padding:22px;display:flex;flex-direction:column;gap:12px;">
+    <form method="POST" action="../../controllers/InventarioController.php?accion=editar_producto" enctype="multipart/form-data" style="padding:22px;display:flex;flex-direction:column;gap:12px;">
         <input type="hidden" name="id_producto" id="edit_prod_id">
+        <input type="hidden" name="imagen_actual" id="edit_prod_imagen_actual">
         <div class="form-grid">
             <div class="form-row"><label>Nombre *</label><input type="text" name="nombre" id="edit_prod_nombre" class="inp" required></div>
             <div class="form-row"><label>Categoría *</label>
@@ -393,6 +416,17 @@ document.addEventListener('DOMContentLoaded',()=>Swal.fire({
         </div>
         <div class="form-row"><label>Precio *</label><input type="number" name="precio" id="edit_prod_precio" class="inp" step="0.01" min="0" required></div>
         <div class="form-row"><label>Descripción</label><textarea name="descripcion" id="edit_prod_desc" class="inp" rows="2" style="resize:none;"></textarea></div>
+        <div class="form-row">
+            <label>Imagen del producto <span style="font-weight:400;color:#aaa;">(dejar vacío para conservar la actual)</span></label>
+            <div id="editar-drop-zone" onclick="document.getElementById('editar_imagen_input').click()"
+                 style="border:2px dashed #c8d8df;border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:#fafcfd;">
+                <i class="fas fa-cloud-upload-alt" style="font-size:24px;color:#8FB7C7;display:block;margin-bottom:6px;"></i>
+                <span id="editar-drop-label" style="font-size:12px;color:#7a8fa6;">Haz clic o arrastra una imagen aquí</span>
+                <img id="editar-preview" src="" alt="" style="display:none;max-height:100px;margin:8px auto 0;border-radius:8px;object-fit:cover;">
+            </div>
+            <input type="file" id="editar_imagen_input" name="imagen" accept="image/*" style="display:none;"
+                   onchange="previewImagen(this,'editar-preview','editar-drop-label')">
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
             <button type="button" onclick="closeModal('modalEditarProd')" style="padding:9px 20px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
             <button type="submit" class="btn-navy">Actualizar</button>
@@ -417,12 +451,42 @@ window.addEventListener('click', e => {
     });
 });
 function openEditProd(p) {
-    document.getElementById('edit_prod_id').value     = p.id_producto;
-    document.getElementById('edit_prod_nombre').value = p.nombre;
-    document.getElementById('edit_prod_precio').value = p.precio;
-    document.getElementById('edit_prod_desc').value   = p.descripcion ?? '';
-    document.getElementById('edit_prod_cat').value    = p.id_categoria;
+    document.getElementById('edit_prod_id').value           = p.id_producto;
+    document.getElementById('edit_prod_nombre').value       = p.nombre;
+    document.getElementById('edit_prod_precio').value       = p.precio;
+    document.getElementById('edit_prod_desc').value         = p.descripcion ?? '';
+    document.getElementById('edit_prod_cat').value          = p.id_categoria;
+    document.getElementById('edit_prod_imagen_actual').value = p.imagen ?? '';
+
+    // Mostrar imagen actual en el drop zone si existe
+    const preview = document.getElementById('editar-preview');
+    const label   = document.getElementById('editar-drop-label');
+    if (p.imagen) {
+        preview.src = '../../img/productos/' + p.imagen;
+        preview.style.display = 'block';
+        label.textContent = 'Imagen actual (sube una nueva para reemplazarla)';
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+        label.textContent = 'Haz clic o arrastra una imagen aquí';
+    }
+    // Limpiar el input file
+    document.getElementById('editar_imagen_input').value = '';
     openModal('modalEditarProd');
+}
+
+function previewImagen(input, previewId, labelId) {
+    const file    = input.files[0];
+    const preview = document.getElementById(previewId);
+    const label   = document.getElementById(labelId);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        label.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
 }
 function filtrarTabla(tablaId, inputId) {
     const q = document.getElementById(inputId).value.toLowerCase();

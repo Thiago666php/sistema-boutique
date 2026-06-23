@@ -125,32 +125,28 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 .cart-qty  { width:60px; }
 .cart-sub  { width:90px; text-align:right; font-weight:700; color:var(--navy); font-size:13px; }
 
-/* Recibo */
-.recibo-box {
-    max-width:420px; margin:0 auto;
-    border:1px solid #d0e6ef; border-radius:16px;
-    padding:28px 24px; background:#fff;
-    font-size:13px;
+/* Recibo — contenedor de previsualización en pantalla */
+.recibo-preview-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 20px;
 }
-.recibo-logo { text-align:center; margin-bottom:12px; }
-.recibo-logo img { height:56px; }
-.recibo-title { text-align:center; font-size:18px; font-weight:800; color:var(--navy); margin:0 0 4px; }
-.recibo-sub   { text-align:center; font-size:11px; color:#7a8fa6; margin:0 0 16px; }
-.recibo-divider { border:none; border-top:1px dashed #c8d8df; margin:12px 0; }
-.recibo-row { display:flex; justify-content:space-between; margin-bottom:6px; }
-.recibo-row span:first-child { color:#5a7080; }
-.recibo-row span:last-child  { font-weight:600; color:var(--navy); }
-.recibo-total { font-size:18px; font-weight:800; color:var(--navy); }
-.recibo-tbl { width:100%; border-collapse:collapse; font-size:12px; margin:10px 0; }
-.recibo-tbl th { background:#f0f4f6; padding:6px 8px; text-align:left; color:var(--navy); font-weight:700; }
-.recibo-tbl td { padding:6px 8px; border-bottom:1px solid #eef2f5; }
-.recibo-tbl tbody tr:last-child td { border-bottom:none; }
 
 @media print {
-    .caj-tabs, .sidebar, header, footer,
-    .no-print { display:none !important; }
-    .caj-pane { display:block !important; }
-    body { background:#fff !important; }
+    /* Técnica: ocultar toda la página con visibility y mostrar solo el ticket */
+    body * { visibility: hidden !important; }
+    #ticket-recibo,
+    #ticket-recibo * { visibility: visible !important; }
+    #ticket-recibo {
+        position: fixed !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 340px !important;
+        box-shadow: none !important;
+        border-left: 1px solid #ddd !important;
+        border-right: 1px solid #ddd !important;
+    }
 }
 </style>
 
@@ -374,13 +370,13 @@ document.addEventListener('DOMContentLoaded', () => Swal.fire({
 
             <?php if ($recibo): ?>
             <div class="no-print" id="btnImprimirRecibo" style="display:flex;gap:10px;margin-top:20px;justify-content:center;">
-                <button class="btn-navy" onclick="window.print()">
+                <button class="btn-navy" onclick="imprimirTicket()">
                     <i class="fas fa-print"></i> Imprimir
                 </button>
             </div>
             <?php else: ?>
             <div class="no-print" id="btnImprimirRecibo" style="display:none;gap:10px;margin-top:20px;justify-content:center;">
-                <button class="btn-navy" onclick="window.print()">
+                <button class="btn-navy" onclick="imprimirTicket()">
                     <i class="fas fa-print"></i> Imprimir
                 </button>
             </div>
@@ -616,22 +612,66 @@ function verRecibo(id) {
 }
 
 /* ── Buscar recibo (AJAX) ─────────────────────────────────── */
+let reciboIdActual = <?= $reciboId ?: 0 ?>;
+
 function buscarRecibo() {
     const id = document.getElementById('buscarReciboId').value;
     if (!id) return;
+    reciboIdActual = id;
     const cont = document.getElementById('reciboContenido');
     cont.innerHTML = '<div style="text-align:center;padding:40px;color:#8FB7C7;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
     fetch(`../../controllers/ReciboController.php?id=${id}`)
         .then(r => r.text())
         .then(html => {
             cont.innerHTML = html;
-            // Mostrar botón imprimir si hay recibo
             const btnArea = document.getElementById('btnImprimirRecibo');
-            if (btnArea) btnArea.style.display = html.includes('recibo-box') ? 'flex' : 'none';
+            if (btnArea) btnArea.style.display = html.includes('ticket-recibo') ? 'flex' : 'none';
         })
         .catch(() => {
             cont.innerHTML = '<p style="text-align:center;color:#c0392b;padding:30px;">Error al cargar el recibo.</p>';
         });
+}
+
+/* ── Imprimir ticket en ventana limpia ───────────────────── */
+function imprimirTicket() {
+    const id = reciboIdActual;
+    if (!id) return;
+
+    const win = window.open('', '_blank', 'width=420,height=700,scrollbars=yes');
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Recibo #${id}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#f5f5f5; display:flex; justify-content:center; padding:20px; }
+        @media print {
+            body { background:#fff; padding:0; }
+            .print-btn { display:none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="print-btn" style="text-align:center;margin-bottom:16px;">
+            <button onclick="window.print()" style="background:#1a2d47;color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+                🖨️ Imprimir
+            </button>
+        </div>
+        <div id="ticket-container"></div>
+    </div>
+    <script>
+        fetch('../../controllers/ReciboController.php?id=${id}')
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('ticket-container').innerHTML = html;
+            });
+    <\/script>
+</body>
+</html>`);
+    win.document.close();
 }
 </script>
 

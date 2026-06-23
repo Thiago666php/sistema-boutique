@@ -163,22 +163,6 @@ document.addEventListener('DOMContentLoaded', () => Swal.fire({
 
 <div class="caj-wrap">
 
-    <!-- Tabs -->
-    <div class="caj-tabs">
-        <button class="caj-tab <?= $tab==='ventas'      ?'active':'' ?>" onclick="switchTab('ventas')">
-            <i class="fas fa-cash-register"></i> Nueva Venta
-        </button>
-        <button class="caj-tab <?= $tab==='devoluciones'?'active':'' ?>" onclick="switchTab('devoluciones')">
-            <i class="fas fa-undo-alt"></i> Devoluciones
-        </button>
-        <button class="caj-tab <?= $tab==='recibo'      ?'active':'' ?>" onclick="switchTab('recibo')">
-            <i class="fas fa-receipt"></i> Recibo
-        </button>
-        <button class="caj-tab <?= $tab==='historial'   ?'active':'' ?>" onclick="switchTab('historial')">
-            <i class="fas fa-history"></i> Historial
-        </button>
-    </div>
-
     <!-- ══════════════════════════════════════════════════════
          TAB 1 — NUEVA VENTA
     ══════════════════════════════════════════════════════ -->

@@ -102,4 +102,3 @@ class Categoria
     }
 }
 ?>
-pene
